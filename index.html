@@ -45,7 +45,6 @@
       z-index: 1;
     }
 
-    /* Desktop Trash Bin */
     .physics-trash {
       position: absolute;
       top: 0;
@@ -88,7 +87,6 @@
       pointer-events: none;
     }
 
-    /* Windows XP Window Body */
     .xp-window {
       position: absolute;
       top: 0;
@@ -106,9 +104,13 @@
       transform-origin: center center;
       z-index: 2;
       overflow: hidden;
+      transition: opacity 0.15s ease;
     }
 
-    /* Title Bar */
+    .xp-window.minimized {
+      display: none !important;
+    }
+
     .title-bar {
       height: 22px;
       background: linear-gradient(to bottom, #0058ee 0%, #3a93ff 8%, #0055ea 25%, #0045cc 100%);
@@ -159,7 +161,6 @@
     .win-btn.close { background: linear-gradient(to bottom, #e76d48 0%, #e04114 100%); }
     .win-btn.min, .win-btn.max { background: linear-gradient(to bottom, #3c91ff 0%, #0055ea 100%); }
 
-    /* Glossy Tab Bar */
     .tab-bar {
       display: flex;
       background: linear-gradient(to bottom, #d2e4f7 0%, #b8d5f5 100%);
@@ -320,7 +321,6 @@
       object-fit: contain;
     }
 
-    /* Secret Info Overlay Modal */
     .secret-info-modal {
       position: absolute;
       top: 0;
@@ -357,7 +357,6 @@
       font-weight: bold;
     }
 
-    /* Start Menu Popup */
     .start-menu {
       position: absolute;
       left: 0;
@@ -463,7 +462,6 @@
       color: white;
     }
 
-    /* Windows XP Taskbar */
     .taskbar {
       position: absolute;
       bottom: 0;
@@ -537,6 +535,11 @@
       cursor: pointer;
     }
 
+    .taskbar-item.active {
+      background: linear-gradient(to bottom, #193888 0%, #295cc0 100%);
+      box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
     .system-tray {
       height: 100%;
       padding: 0 10px;
@@ -554,7 +557,6 @@
 <body>
 
   <div id="screen-container">
-    <!-- Desktop Physics Recycle Bin Button -->
     <div id="trash-bin" class="physics-trash">
       <img src="Recyclebin.png" alt="Recycle Bin" />
       <span>Recycle Bin</span>
@@ -562,7 +564,6 @@
 
     <div id="canvas-container"></div>
 
-    <!-- Start Menu Popup -->
     <div id="start-menu" class="start-menu">
       <div class="start-menu-header">
         <div class="start-menu-avatar">
@@ -581,7 +582,6 @@
             <span>E-mail</span>
           </div>
           <hr style="width:100%; border:none; border-top:1px solid #ddd; margin:2px 0;">
-          <!-- Start Menu Recycle Bin Button -->
           <div class="menu-item" id="start-menu-recycle-bin">
             <img src="Recyclebin.png" alt="Recycle Bin" />
             <span>Recycle Bin</span>
@@ -603,7 +603,6 @@
       </div>
     </div>
 
-    <!-- Windows Explorer Window -->
     <div id="xp-window" class="xp-window">
       <div class="title-bar" id="title-bar">
         <div class="title-bar-title">
@@ -611,9 +610,9 @@
           <span>Windows Explorer</span>
         </div>
         <div class="title-bar-controls">
-          <div class="win-btn min">_</div>
+          <div class="win-btn min" id="win-min-btn">_</div>
           <div class="win-btn max">□</div>
-          <div class="win-btn close">✕</div>
+          <div class="win-btn close" id="win-close-btn">✕</div>
         </div>
       </div>
 
@@ -667,7 +666,6 @@
           </div>
         </div>
 
-        <!-- Secret Info Modal Overlay -->
         <div id="secret-modal" class="secret-info-modal">
           <div class="secret-header">
             <span>Hidden Folder Details</span>
@@ -680,14 +678,13 @@
       </div>
     </div>
 
-    <!-- Windows XP Taskbar -->
     <div class="taskbar">
       <div id="start-btn" class="start-button">
         <img class="start-icon" src="WindowsXP.png" alt="Windows XP Logo" />
         <span>start</span>
       </div>
       <div class="taskbar-items">
-        <div class="taskbar-item">
+        <div class="taskbar-item active" id="explorer-taskbar-item">
           <img class="folder-icon-img" src="Folder.png" alt="Folder" />
           <span>Windows Explorer</span>
         </div>
@@ -735,7 +732,6 @@
 
     Composite.add(engine.world, [ground, ceiling, leftWall, rightWall]);
 
-    // Window Body
     const winElem = document.getElementById('xp-window');
     const titleBarElem = document.getElementById('title-bar');
     const winWidth = 330;
@@ -750,7 +746,6 @@
       render: invisibleRender
     });
 
-    // Desktop Trash Bin Physics Body
     const trashElem = document.getElementById('trash-bin');
     const trashWidth = 56;
     const trashHeight = 56;
@@ -764,7 +759,6 @@
       render: invisibleRender
     });
 
-    // Start Menu Static Physics Collision Body
     const startMenuElem = document.getElementById('start-menu');
     const startMenuWidth = 260;
     const startMenuHeight = 300;
@@ -783,8 +777,60 @@
     let trashGravity = true;
     let windowGravity = true;
     let isTimeFrozen = false;
+    let isWindowMinimized = false;
 
-    // Pointer Drag System with Distance Check
+    // Window Minimize / Restore Logic
+    const winMinBtn = document.getElementById('win-min-btn');
+    const winCloseBtn = document.getElementById('win-close-btn');
+    const explorerTaskbarItem = document.getElementById('explorer-taskbar-item');
+
+    function minimizeWindow() {
+      isWindowMinimized = true;
+      winElem.classList.add('minimized');
+      explorerTaskbarItem.classList.remove('active');
+      Composite.remove(engine.world, windowBody);
+    }
+
+    function restoreWindow() {
+      isWindowMinimized = false;
+      winElem.classList.remove('minimized');
+      explorerTaskbarItem.classList.add('active');
+      
+      // Reset position to center top with zero velocity when restored
+      Body.setPosition(windowBody, { x: screenWidth / 2, y: 140 });
+      Body.setVelocity(windowBody, { x: 0, y: 0 });
+      Body.setAngularVelocity(windowBody, 0);
+      Body.setAngle(windowBody, 0);
+      
+      if (!Composite.allBodies(engine.world).includes(windowBody)) {
+        Composite.add(engine.world, windowBody);
+      }
+    }
+
+    function toggleWindow() {
+      if (isWindowMinimized) {
+        restoreWindow();
+      } else {
+        minimizeWindow();
+      }
+    }
+
+    winMinBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      minimizeWindow();
+    });
+
+    winCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      minimizeWindow();
+    });
+
+    explorerTaskbarItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleWindow();
+    });
+
+    // Pointer Drag System
     let draggedBody = null;
     let dragOffset = { x: 0, y: 0 };
     let previousPos = { x: 0, y: 0 };
@@ -830,7 +876,6 @@
 
       const moveDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
 
-      // Trigger action on desktop Recycle Bin click
       if (draggedBody === trashBody && moveDist < 5) {
         spawnRecycleBinTab();
       }
@@ -840,16 +885,15 @@
       draggedBody = null;
     });
 
-    // Trigger action on Start Menu Recycle Bin click
     const startMenuRecycleBin = document.getElementById('start-menu-recycle-bin');
     startMenuRecycleBin.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isWindowMinimized) restoreWindow();
       spawnRecycleBinTab();
       startMenuElem.classList.remove('open');
       Composite.remove(engine.world, startMenuBody);
     });
 
-    // Start Menu Hitbox toggle
     const startBtn = document.getElementById('start-btn');
     startBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -861,7 +905,6 @@
       }
     });
 
-    // Dynamic Tab System
     const tabBar = document.getElementById('tab-bar');
     const addressText = document.getElementById('address-text');
     const folderLabel = document.getElementById('folder-label');
@@ -889,7 +932,6 @@
       });
     }
 
-    // Bind initial tabs
     document.querySelectorAll('.tab-bar .tab').forEach(tab => {
       if (!tab.getAttribute('data-name')) {
         tab.setAttribute('data-name', tab.innerText.trim());
@@ -898,12 +940,12 @@
       bindTabClick(tab);
     });
 
-    // Initial active tab setup
     const initialActive = document.querySelector('.tab-bar .tab.active');
     if (initialActive) activateTab(initialActive);
 
-    // Spawn new tab when any Recycle Bin button is clicked
     function spawnRecycleBinTab() {
+      if (isWindowMinimized) restoreWindow();
+
       let existingTab = Array.from(tabBar.querySelectorAll('.tab')).find(
         tab => tab.getAttribute('data-path') === 'C:\\Recycle Bin'
       );
@@ -956,7 +998,7 @@
         trashElem.style.transform = `translate3d(${trashPos.x - trashWidth / 2}px, ${trashPos.y - trashHeight / 2}px, 0px) rotate(${trashAngle}rad)`;
       }
 
-      if (windowGravity) {
+      if (windowGravity && !isWindowMinimized) {
         const winPos = windowBody.position;
         const winAngle = windowBody.angle;
         winElem.style.transform = `translate3d(${winPos.x - winWidth / 2}px, ${winPos.y - winHeight / 2}px, 0px) rotate(${winAngle}rad)`;
