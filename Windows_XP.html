@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Windows XP gravity</title>
+  <link rel="icon" type="image/png" href="WindowsXP.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Tahoma", "Segoe UI", sans-serif;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #screen-container {
+      position: relative;
+      width: min(100vw, calc(100vh * 4 / 3));
+      height: min(100vh, calc(100vw * 3 / 4));
+      background: url('https://i.ibb.co.com/JjQd2ysy/Wallpaper002.webp') no-repeat center center;
+      background-size: cover;
+      border: 8px solid #111111;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Desktop Trash Bin */
+    .physics-trash {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3px;
+      background: transparent;
+      border: none;
+      cursor: grab;
+      pointer-events: auto;
+      transform-origin: center center;
+      z-index: 5;
+    }
+
+    .physics-trash:active {
+      cursor: grabbing;
+    }
+
+    .physics-trash img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      background: transparent;
+      filter: drop-shadow(1px 2px 4px rgba(0, 0, 0, 0.6));
+      pointer-events: none;
+    }
+
+    .physics-trash span {
+      margin-top: 1px;
+      font-size: 9px;
+      color: white;
+      text-align: center;
+      text-shadow: 1px 1px 2px #000, 0 0 4px #000;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Windows XP Window Body */
+    .xp-window {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 330px;
+      height: 240px;
+      background: #ece9d8;
+      border: 2px solid #0055ea;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      box-shadow: 0 8px 20px rgba(0, 50, 120, 0.4);
+      display: flex;
+      flex-direction: column;
+      pointer-events: auto;
+      transform-origin: center center;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    /* Title Bar */
+    .title-bar {
+      height: 22px;
+      background: linear-gradient(to bottom, #0058ee 0%, #3a93ff 8%, #0055ea 25%, #0045cc 100%);
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      color: white;
+      font-weight: bold;
+      font-size: 10px;
+      text-shadow: 1px 1px 1px #0f3889;
+      cursor: grab;
+    }
+
+    .title-bar:active {
+      cursor: grabbing;
+    }
+
+    .title-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .title-bar-controls {
+      display: flex;
+      gap: 2px;
+    }
+
+    .win-btn {
+      width: 16px;
+      height: 16px;
+      border: 1px solid #ffffff;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: bold;
+      color: white;
+      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+    }
+
+    .win-btn.close { background: linear-gradient(to bottom, #e76d48 0%, #e04114 100%); }
+    .win-btn.min, .win-btn.max { background: linear-gradient(to bottom, #3c91ff 0%, #0055ea 100%); }
+
+    /* Glossy Tab Bar */
+    .tab-bar {
+      display: flex;
+      background: linear-gradient(to bottom, #d2e4f7 0%, #b8d5f5 100%);
+      padding: 4px 6px 0 6px;
+      border-bottom: 1px solid #6e99c9;
+      gap: 3px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .tab {
+      padding: 4px 10px;
+      font-size: 9px;
+      background: linear-gradient(to bottom, 
+        rgba(255, 255, 255, 0.95) 0%, 
+        rgba(215, 235, 255, 0.65) 48%, 
+        rgba(168, 208, 250, 0.75) 50%, 
+        rgba(210, 238, 255, 0.9) 100%);
+      border: 1px solid #8caed8;
+      border-bottom: none;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      color: #0f3869;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 -1px 2px rgba(0, 80, 200, 0.15);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      position: relative;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .tab.active {
+      background: linear-gradient(to bottom, 
+        #ffffff 0%, 
+        #dceeff 48%, 
+        #a8d4ff 50%, 
+        #e3f2ff 100%);
+      font-weight: bold;
+      color: #002255;
+      border: 1px solid #4880c8;
+      border-bottom: 1px solid #ffffff;
+      margin-bottom: -1px;
+      padding-bottom: 5px;
+      box-shadow: inset 0 1px 1px #ffffff, 0 -2px 4px rgba(0, 110, 255, 0.25);
+      z-index: 2;
+    }
+
+    .folder-icon-img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+    }
+
+    .menu-bar {
+      display: flex;
+      gap: 9px;
+      padding: 2px 6px;
+      background: #ece9d8;
+      font-size: 9px;
+      border-bottom: 1px solid #d0ccc0;
+      color: #000;
+    }
+
+    .address-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      background: #ece9d8;
+      border-bottom: 1px solid #aca899;
+      font-size: 9px;
+      color: #444;
+    }
+
+    .address-input {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #7f9db9;
+      padding: 1px 4px;
+      font-size: 9px;
+      color: #000;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .explorer-body {
+      flex: 1;
+      display: flex;
+      background: #ffffff;
+      margin: 0 3px 3px 3px;
+      border: 1px solid #7f9db9;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .task-pane {
+      width: 82px;
+      background: linear-gradient(to bottom, #7ba2e7 0%, #6375d6 100%);
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pane-section {
+      background: #ffffff;
+      border-radius: 2px;
+      overflow: hidden;
+      font-size: 8px;
+      border: 1px solid #2e5192;
+    }
+
+    .pane-header {
+      background: linear-gradient(to right, #205ac7, #4880ed);
+      color: white;
+      font-weight: bold;
+      padding: 2px 4px;
+    }
+
+    .pane-content {
+      padding: 4px;
+      color: #0f3889;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .file-view {
+      flex: 1;
+      padding: 9px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-content: flex-start;
+      background: #fff;
+    }
+
+    .file-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 64px;
+      font-size: 9px;
+      text-align: center;
+      gap: 3px;
+      cursor: pointer;
+    }
+
+    .file-item img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+    }
+
+    /* Secret Info Overlay Modal */
+    .secret-info-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffe1;
+      border: 1px solid #000;
+      padding: 8px;
+      font-size: 9px;
+      color: #000;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 10;
+    }
+
+    .secret-info-modal.open {
+      display: flex;
+    }
+
+    .secret-header {
+      font-weight: bold;
+      color: #000080;
+      border-bottom: 1px dashed #a0a0a0;
+      padding-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .secret-close {
+      cursor: pointer;
+      color: red;
+      font-weight: bold;
+    }
+
+    /* Start Menu Popup */
+    .start-menu {
+      position: absolute;
+      left: 0;
+      bottom: 30px;
+      width: 260px;
+      height: 300px;
+      background: #ffffff;
+      border: 2px solid #0055ea;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+      box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+      z-index: 15;
+      overflow: hidden;
+      transform-origin: center center;
+    }
+
+    .start-menu.open {
+      display: flex;
+    }
+
+    .start-menu-header {
+      height: 48px;
+      background: linear-gradient(to bottom, #0058ee 0%, #3a93ff 10%, #0055ea 100%);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 10px;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      text-shadow: 1px 1px 1px #002d80;
+    }
+
+    .start-menu-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 4px;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d2f75;
+      padding: 2px;
+    }
+
+    .start-menu-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .start-menu-body {
+      flex: 1;
+      display: flex;
+      background: #d3e5fa;
+    }
+
+    .start-menu-left {
+      width: 52%;
+      background: #fff;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 10px;
+      border-right: 1px solid #b5cde7;
+    }
+
+    .start-menu-right {
+      width: 48%;
+      background: #d3e5fa;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 10px;
+      color: #00175a;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 5px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .menu-item img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .menu-item:hover {
+      background: #316ac5;
+      color: white;
+    }
+
+    /* Windows XP Taskbar */
+    .taskbar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 30px;
+      background: linear-gradient(to bottom, #245edb 0%, #3f8cf3 9%, #245edb 18%, #1941a5 92%, #19318b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      border-top: 1px solid #3e80ed;
+    }
+
+    .start-button {
+      position: relative;
+      width: 72px;
+      height: 100%;
+      background: linear-gradient(to bottom, #388038 0%, #66b535 15%, #388335 85%, #1d511d 100%);
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: white;
+      font-weight: bold;
+      font-style: italic;
+      font-size: 13px;
+      box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6);
+      text-shadow: 1px 1px 1px #114411;
+      cursor: pointer;
+      z-index: 12;
+    }
+
+    .start-button:hover {
+      filter: brightness(1.15);
+    }
+
+    .start-button:active {
+      filter: brightness(0.85);
+    }
+
+    .start-icon {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+    }
+
+    .taskbar-items {
+      flex: 1;
+      display: flex;
+      padding-left: 6px;
+      padding-right: 6px;
+      gap: 4px;
+    }
+
+    .taskbar-item {
+      height: 22px;
+      padding: 0 8px;
+      background: linear-gradient(to bottom, #3c81f3 0%, #1742b6 100%);
+      border: 1px solid #133288;
+      border-radius: 2px;
+      color: white;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 160px;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+    }
+
+    .system-tray {
+      height: 100%;
+      padding: 0 10px;
+      background: linear-gradient(to bottom, #0c8fea 0%, #0968c6 100%);
+      border-left: 1px solid #104080;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      font-size: 11px;
+      box-shadow: inset 1px 0 1px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="screen-container">
+    <!-- Desktop Physics Recycle Bin Button -->
+    <div id="trash-bin" class="physics-trash">
+      <img src="Recyclebin.png" alt="Recycle Bin" />
+      <span>Recycle Bin</span>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <!-- Start Menu Popup -->
+    <div id="start-menu" class="start-menu">
+      <div class="start-menu-header">
+        <div class="start-menu-avatar">
+          <img src="ProfilePicture.png" alt="User Profile" />
+        </div>
+        <span>Administrator</span>
+      </div>
+      <div class="start-menu-body">
+        <div class="start-menu-left">
+          <div class="menu-item">
+            <img src="InternetExplorer.jpg" alt="Internet Explorer" />
+            <span>Internet Explorer</span>
+          </div>
+          <div class="menu-item">
+            <img src="E-mail.png" alt="E-mail" />
+            <span>E-mail</span>
+          </div>
+          <hr style="width:100%; border:none; border-top:1px solid #ddd; margin:2px 0;">
+          <!-- Start Menu Recycle Bin Button -->
+          <div class="menu-item" id="start-menu-recycle-bin">
+            <img src="Recyclebin.png" alt="Recycle Bin" />
+            <span>Recycle Bin</span>
+          </div>
+          <div class="menu-item">
+            <img src="Minesweeper.png" alt="Minesweeper" />
+            <span>Minesweeper</span>
+          </div>
+          <div class="menu-item">
+            <img src="Solitaire.png" alt="Solitaire" />
+            <span>Solitaire</span>
+          </div>
+        </div>
+        <div class="start-menu-right">
+          <div class="menu-item"><b>My Documents</b></div>
+          <div class="menu-item"><b>My Computer</b></div>
+          <div class="menu-item">Control Panel</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Windows Explorer Window -->
+    <div id="xp-window" class="xp-window">
+      <div class="title-bar" id="title-bar">
+        <div class="title-bar-title">
+          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
+          <span>Windows Explorer</span>
+        </div>
+        <div class="title-bar-controls">
+          <div class="win-btn min">_</div>
+          <div class="win-btn max">□</div>
+          <div class="win-btn close">✕</div>
+        </div>
+      </div>
+
+      <div class="tab-bar" id="tab-bar">
+        <div class="tab active" data-path="C:\WINDOWS\Resources" data-info="📁 SYSTEM INFORMATION: Hidden Windows XP system resources archive located in C:\WINDOWS\Resources. Press 'P' key anytime to freeze time!">
+          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
+          Resources
+        </div>
+        <div class="tab" data-path="C:\WINDOWS\Media" data-info="🎵 MEDIA VAULT: Contains system sound effects like chimes.wav and Windows XP Startup sound.">
+          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
+          Media
+        </div>
+        <div class="tab" data-path="C:\WINDOWS\System" data-info="⚙️ SYSTEM CONFIG: Crucial system files and DLL drivers. Handle with care!">
+          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
+          System
+        </div>
+      </div>
+
+      <div class="menu-bar">
+        <span>File</span>
+        <span>Edit</span>
+        <span>View</span>
+        <span>Favorites</span>
+        <span>Tools</span>
+        <span>Help</span>
+      </div>
+
+      <div class="address-bar">
+        <span>Address</span>
+        <div class="address-input" id="address-text">
+          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
+          C:\WINDOWS\Resources
+        </div>
+      </div>
+
+      <div class="explorer-body">
+        <div class="task-pane">
+          <div class="pane-section">
+            <div class="pane-header">Tasks</div>
+            <div class="pane-content">
+              <span>New folder</span>
+              <span>Publish Web</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="file-view">
+          <div class="file-item" id="folder-item">
+            <img id="folder-img" src="Folder.png" alt="Folder" />
+            <span id="folder-label">Resources</span>
+          </div>
+        </div>
+
+        <!-- Secret Info Modal Overlay -->
+        <div id="secret-modal" class="secret-info-modal">
+          <div class="secret-header">
+            <span>Hidden Folder Details</span>
+            <span class="secret-close" id="secret-close">✕</span>
+          </div>
+          <div id="secret-body">
+            Secret Information Unlocked!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Windows XP Taskbar -->
+    <div class="taskbar">
+      <div id="start-btn" class="start-button">
+        <img class="start-icon" src="WindowsXP.png" alt="Windows XP Logo" />
+        <span>start</span>
+      </div>
+      <div class="taskbar-items">
+        <div class="taskbar-item">
+          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
+          <span>Windows Explorer</span>
+        </div>
+      </div>
+      <div class="system-tray">
+        <span>🔊</span>
+        <span id="tray-clock">4:20 PM</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+    const screenContainer = document.getElementById('screen-container');
+    let screenWidth = screenContainer.clientWidth;
+    let screenHeight = screenContainer.clientHeight;
+    const taskbarHeight = 30;
+
+    const engine = Engine.create({ gravity: { x: 0, y: 1 } });
+
+    const render = Render.create({
+      element: document.getElementById('canvas-container'),
+      engine: engine,
+      options: {
+        width: screenWidth,
+        height: screenHeight,
+        wireframes: false,
+        background: 'transparent'
+      }
+    });
+
+    Render.run(render);
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    const invisibleRender = { visible: false };
+    const wallOptions = { isStatic: true, restitution: 0.6, render: invisibleRender };
+    const wallThickness = 200;
+
+    let ground = Bodies.rectangle(screenWidth / 2, (screenHeight - taskbarHeight) + wallThickness / 2, screenWidth * 2, wallThickness, wallOptions);
+    let ceiling = Bodies.rectangle(screenWidth / 2, -wallThickness / 2, screenWidth * 2, wallThickness, wallOptions);
+    let leftWall = Bodies.rectangle(-wallThickness / 2, screenHeight / 2, wallThickness, screenHeight * 2, wallOptions);
+    let rightWall = Bodies.rectangle(screenWidth + wallThickness / 2, screenHeight / 2, wallThickness, screenHeight * 2, wallOptions);
+
+    Composite.add(engine.world, [ground, ceiling, leftWall, rightWall]);
+
+    // Window Body
+    const winElem = document.getElementById('xp-window');
+    const titleBarElem = document.getElementById('title-bar');
+    const winWidth = 330;
+    const winHeight = 240;
+
+    const windowBody = Bodies.rectangle(screenWidth / 2, 140, winWidth, winHeight, {
+      isStatic: false,
+      restitution: 0.65,
+      friction: 0.1,
+      density: 0.005,
+      chamfer: { radius: 6 },
+      render: invisibleRender
+    });
+
+    // Desktop Trash Bin Physics Body
+    const trashElem = document.getElementById('trash-bin');
+    const trashWidth = 56;
+    const trashHeight = 56;
+
+    const trashBody = Bodies.rectangle(100, 50, trashWidth, trashHeight, {
+      isStatic: false,
+      restitution: 0.75,
+      friction: 0.2,
+      density: 0.002,
+      chamfer: { radius: 5 },
+      render: invisibleRender
+    });
+
+    // Start Menu Static Physics Collision Body
+    const startMenuElem = document.getElementById('start-menu');
+    const startMenuWidth = 260;
+    const startMenuHeight = 300;
+    const startMenuX = startMenuWidth / 2;
+    const startMenuY = screenHeight - taskbarHeight - (startMenuHeight / 2);
+
+    const startMenuBody = Bodies.rectangle(startMenuX, startMenuY, startMenuWidth, startMenuHeight, {
+      isStatic: true,
+      restitution: 0.8,
+      friction: 0.1,
+      render: invisibleRender
+    });
+
+    Composite.add(engine.world, [windowBody, trashBody]);
+
+    let trashGravity = true;
+    let windowGravity = true;
+    let isTimeFrozen = false;
+
+    // Pointer Drag System with Distance Check
+    let draggedBody = null;
+    let dragOffset = { x: 0, y: 0 };
+    let previousPos = { x: 0, y: 0 };
+    let dragVelocity = { x: 0, y: 0 };
+    let dragStartPos = { x: 0, y: 0 };
+
+    function startDragging(e, body) {
+      draggedBody = body;
+      const pos = body.position;
+      dragOffset.x = e.clientX - pos.x;
+      dragOffset.y = e.clientY - pos.y;
+      previousPos = { x: e.clientX, y: e.clientY };
+      dragStartPos = { x: e.clientX, y: e.clientY };
+      dragVelocity = { x: 0, y: 0 };
+
+      Body.setStatic(body, true);
+    }
+
+    titleBarElem.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('win-btn')) return;
+      startDragging(e, windowBody);
+    });
+
+    trashElem.addEventListener('mousedown', (e) => {
+      startDragging(e, trashBody);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!draggedBody) return;
+
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+
+      dragVelocity.x = (e.clientX - previousPos.x) * 0.5;
+      dragVelocity.y = (e.clientY - previousPos.y) * 0.5;
+      previousPos = { x: e.clientX, y: e.clientY };
+
+      Body.setPosition(draggedBody, { x: newX, y: newY });
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!draggedBody) return;
+
+      const moveDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+
+      // Trigger action on desktop Recycle Bin click
+      if (draggedBody === trashBody && moveDist < 5) {
+        spawnRecycleBinTab();
+      }
+
+      Body.setStatic(draggedBody, false);
+      Body.setVelocity(draggedBody, dragVelocity);
+      draggedBody = null;
+    });
+
+    // Trigger action on Start Menu Recycle Bin click
+    const startMenuRecycleBin = document.getElementById('start-menu-recycle-bin');
+    startMenuRecycleBin.addEventListener('click', (e) => {
+      e.stopPropagation();
+      spawnRecycleBinTab();
+      startMenuElem.classList.remove('open');
+      Composite.remove(engine.world, startMenuBody);
+    });
+
+    // Start Menu Hitbox toggle
+    const startBtn = document.getElementById('start-btn');
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = startMenuElem.classList.toggle('open');
+      if (isOpen) {
+        Composite.add(engine.world, startMenuBody);
+      } else {
+        Composite.remove(engine.world, startMenuBody);
+      }
+    });
+
+    // Dynamic Tab System
+    const tabBar = document.getElementById('tab-bar');
+    const addressText = document.getElementById('address-text');
+    const folderLabel = document.getElementById('folder-label');
+    const folderImg = document.getElementById('folder-img');
+    let currentSecretInfo = "";
+
+    function activateTab(tabElem) {
+      document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
+      tabElem.classList.add('active');
+
+      const path = tabElem.getAttribute('data-path');
+      const folderName = tabElem.getAttribute('data-name') || tabElem.innerText.trim();
+      const iconSrc = tabElem.getAttribute('data-icon') || 'Folder.png';
+      currentSecretInfo = tabElem.getAttribute('data-info');
+
+      addressText.innerHTML = `<img class="folder-icon-img" src="${iconSrc}" alt="Icon" /> ${path}`;
+      folderLabel.innerText = folderName;
+      folderImg.src = iconSrc;
+    }
+
+    function bindTabClick(tab) {
+      tab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        activateTab(tab);
+      });
+    }
+
+    // Bind initial tabs
+    document.querySelectorAll('.tab-bar .tab').forEach(tab => {
+      if (!tab.getAttribute('data-name')) {
+        tab.setAttribute('data-name', tab.innerText.trim());
+        tab.setAttribute('data-icon', 'Folder.png');
+      }
+      bindTabClick(tab);
+    });
+
+    // Initial active tab setup
+    const initialActive = document.querySelector('.tab-bar .tab.active');
+    if (initialActive) activateTab(initialActive);
+
+    // Spawn new tab when any Recycle Bin button is clicked
+    function spawnRecycleBinTab() {
+      let existingTab = Array.from(tabBar.querySelectorAll('.tab')).find(
+        tab => tab.getAttribute('data-path') === 'C:\\Recycle Bin'
+      );
+
+      if (!existingTab) {
+        existingTab = document.createElement('div');
+        existingTab.className = 'tab';
+        existingTab.setAttribute('data-path', 'C:\\Recycle Bin');
+        existingTab.setAttribute('data-name', 'Recycle Bin');
+        existingTab.setAttribute('data-icon', 'Recyclebin.png');
+        existingTab.setAttribute('data-info', '🗑️ RECYCLE BIN VAULT: Contains deleted items and desktop junk waiting to be restored or permanently purged.');
+        existingTab.innerHTML = `<img class="folder-icon-img" src="Recyclebin.png" alt="Recycle Bin" /> Recycle Bin`;
+
+        tabBar.appendChild(existingTab);
+        bindTabClick(existingTab);
+      }
+
+      activateTab(existingTab);
+    }
+
+    const folderItem = document.getElementById('folder-item');
+    const secretModal = document.getElementById('secret-modal');
+    const secretBody = document.getElementById('secret-body');
+    const secretClose = document.getElementById('secret-close');
+
+    folderItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      secretBody.innerText = currentSecretInfo;
+      secretModal.classList.add('open');
+    });
+
+    secretClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      secretModal.classList.remove('open');
+    });
+
+    const trayClock = document.getElementById('tray-clock');
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'p' || e.key === 'P') {
+        isTimeFrozen = !isTimeFrozen;
+        engine.timing.timeScale = isTimeFrozen ? 0 : 1;
+        trayClock.innerText = isTimeFrozen ? "FROZEN" : "4:20 PM";
+      }
+    });
+
+    Events.on(engine, 'afterUpdate', () => {
+      if (trashGravity) {
+        const trashPos = trashBody.position;
+        const trashAngle = trashBody.angle;
+        trashElem.style.transform = `translate3d(${trashPos.x - trashWidth / 2}px, ${trashPos.y - trashHeight / 2}px, 0px) rotate(${trashAngle}rad)`;
+      }
+
+      if (windowGravity) {
+        const winPos = windowBody.position;
+        const winAngle = windowBody.angle;
+        winElem.style.transform = `translate3d(${winPos.x - winWidth / 2}px, ${winPos.y - winHeight / 2}px, 0px) rotate(${winAngle}rad)`;
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      screenWidth = screenContainer.clientWidth;
+      screenHeight = screenContainer.clientHeight;
+
+      render.canvas.width = screenWidth;
+      render.canvas.height = screenHeight;
+
+      Body.setPosition(ground, { x: screenWidth / 2, y: (screenHeight - taskbarHeight) + wallThickness / 2 });
+      Body.setPosition(ceiling, { x: screenWidth / 2, y: -wallThickness / 2 });
+      Body.setPosition(leftWall, { x: -wallThickness / 2, y: screenHeight / 2 });
+      Body.setPosition(rightWall, { x: screenWidth + wallThickness / 2, y: screenHeight / 2 });
+      
+      Body.setPosition(startMenuBody, { 
+        x: startMenuWidth / 2, 
+        y: screenHeight - taskbarHeight - (startMenuHeight / 2) 
+      });
+    });
+  </script>
+</body>
+</html>
