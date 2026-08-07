@@ -779,12 +779,26 @@
     let isTimeFrozen = false;
     let isWindowMinimized = false;
 
+    // Window position state snapshot for minimizing / restoring
+    let savedWindowState = {
+      position: { x: screenWidth / 2, y: 140 },
+      angle: 0,
+      velocity: { x: 0, y: 0 },
+      angularVelocity: 0
+    };
+
     // Window Minimize / Restore Logic
     const winMinBtn = document.getElementById('win-min-btn');
     const winCloseBtn = document.getElementById('win-close-btn');
     const explorerTaskbarItem = document.getElementById('explorer-taskbar-item');
 
     function minimizeWindow() {
+      // Save current state before removing from world
+      savedWindowState.position = { ...windowBody.position };
+      savedWindowState.angle = windowBody.angle;
+      savedWindowState.velocity = { ...windowBody.velocity };
+      savedWindowState.angularVelocity = windowBody.angularVelocity;
+
       isWindowMinimized = true;
       winElem.classList.add('minimized');
       explorerTaskbarItem.classList.remove('active');
@@ -795,13 +809,13 @@
       isWindowMinimized = false;
       winElem.classList.remove('minimized');
       explorerTaskbarItem.classList.add('active');
-      
-      // Reset position to center top with zero velocity when restored
-      Body.setPosition(windowBody, { x: screenWidth / 2, y: 140 });
-      Body.setVelocity(windowBody, { x: 0, y: 0 });
-      Body.setAngularVelocity(windowBody, 0);
-      Body.setAngle(windowBody, 0);
-      
+
+      // Restore saved position, angle, and velocities exactly
+      Body.setPosition(windowBody, savedWindowState.position);
+      Body.setAngle(windowBody, savedWindowState.angle);
+      Body.setVelocity(windowBody, savedWindowState.velocity);
+      Body.setAngularVelocity(windowBody, savedWindowState.angularVelocity);
+
       if (!Composite.allBodies(engine.world).includes(windowBody)) {
         Composite.add(engine.world, windowBody);
       }
