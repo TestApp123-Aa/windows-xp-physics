@@ -787,13 +787,48 @@
       angularVelocity: 0
     };
 
+    // --- Browser Window Motion Tracking (Inertia System) ---
+    let prevScreenX = window.screenX || window.screenLeft;
+    let prevScreenY = window.screenY || window.screenTop;
+
+    Events.on(engine, 'beforeUpdate', () => {
+      if (isTimeFrozen) return;
+
+      const currentX = window.screenX || window.screenLeft;
+      const currentY = window.screenY || window.screenTop;
+
+      const deltaX = currentX - prevScreenX;
+      const deltaY = currentY - prevScreenY;
+
+      prevScreenX = currentX;
+      prevScreenY = currentY;
+
+      // Apply inertial forces to objects when browser window moves
+      if (deltaX !== 0 || deltaY !== 0) {
+        const forceMultiplier = 0.0006;
+        const force = {
+          x: -deltaX * forceMultiplier,
+          y: -deltaY * forceMultiplier
+        };
+
+        const bodies = Composite.allBodies(engine.world);
+        bodies.forEach(body => {
+          if (!body.isStatic && body !== draggedBody) {
+            Body.applyForce(body, body.position, {
+              x: force.x * body.mass,
+              y: force.y * body.mass
+            });
+          }
+        });
+      }
+    });
+
     // Window Minimize / Restore Logic
     const winMinBtn = document.getElementById('win-min-btn');
     const winCloseBtn = document.getElementById('win-close-btn');
     const explorerTaskbarItem = document.getElementById('explorer-taskbar-item');
 
     function minimizeWindow() {
-      // Save current state before removing from world
       savedWindowState.position = { ...windowBody.position };
       savedWindowState.angle = windowBody.angle;
       savedWindowState.velocity = { ...windowBody.velocity };
@@ -810,7 +845,6 @@
       winElem.classList.remove('minimized');
       explorerTaskbarItem.classList.add('active');
 
-      // Restore saved position, angle, and velocities exactly
       Body.setPosition(windowBody, savedWindowState.position);
       Body.setAngle(windowBody, savedWindowState.angle);
       Body.setVelocity(windowBody, savedWindowState.velocity);
