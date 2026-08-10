@@ -45,12 +45,12 @@
       z-index: 1;
     }
 
-    .physics-trash {
+    /* Desktop Physics Icons */
+    .physics-trash, .physics-icon {
       position: absolute;
       top: 0;
       left: 0;
-      width: 56px;
-      height: 56px;
+      width: 64px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -64,7 +64,7 @@
       z-index: 5;
     }
 
-    .physics-trash:active {
+    .physics-trash:active, .physics-icon:active {
       cursor: grabbing;
     }
 
@@ -77,9 +77,9 @@
       pointer-events: none;
     }
 
-    .physics-trash span {
-      margin-top: 1px;
-      font-size: 9px;
+    .physics-trash span, .physics-icon span {
+      margin-top: 2px;
+      font-size: 10px;
       color: white;
       text-align: center;
       text-shadow: 1px 1px 2px #000, 0 0 4px #000;
@@ -87,6 +87,7 @@
       pointer-events: none;
     }
 
+    /* Window Styles */
     .xp-window {
       position: absolute;
       top: 0;
@@ -112,7 +113,7 @@
     }
 
     .title-bar {
-      height: 22px;
+      height: 24px;
       background: linear-gradient(to bottom, #0058ee 0%, #3a93ff 8%, #0055ea 25%, #0045cc 100%);
       border-top-left-radius: 4px;
       border-top-right-radius: 4px;
@@ -140,26 +141,20 @@
 
     .title-bar-controls {
       display: flex;
-      gap: 2px;
+      gap: 3px;
+      align-items: center;
     }
 
-    .win-btn {
+    .win-btn-img {
       width: 16px;
       height: 16px;
-      border: 1px solid #ffffff;
-      border-radius: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8px;
-      font-weight: bold;
-      color: white;
-      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.8);
+      object-fit: contain;
       cursor: pointer;
     }
 
-    .win-btn.close { background: linear-gradient(to bottom, #e76d48 0%, #e04114 100%); }
-    .win-btn.min, .win-btn.max { background: linear-gradient(to bottom, #3c91ff 0%, #0055ea 100%); }
+    .win-btn-img:hover {
+      filter: brightness(1.15);
+    }
 
     .tab-bar {
       display: flex;
@@ -357,12 +352,13 @@
       font-weight: bold;
     }
 
+    /* Start Menu & Action Buttons */
     .start-menu {
       position: absolute;
       left: 0;
       bottom: 30px;
       width: 260px;
-      height: 300px;
+      height: 320px;
       background: #ffffff;
       border: 2px solid #0055ea;
       border-top-left-radius: 5px;
@@ -441,6 +437,28 @@
       color: #00175a;
     }
 
+    .start-menu-footer {
+      height: 36px;
+      background: linear-gradient(to bottom, #0055ea 0%, #0045cc 100%);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 8px;
+      gap: 8px;
+      border-top: 1px solid #2d6cd8;
+    }
+
+    .start-footer-btn {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      cursor: pointer;
+    }
+
+    .start-footer-btn:hover {
+      filter: brightness(1.2);
+    }
+
     .menu-item {
       display: flex;
       align-items: center;
@@ -462,6 +480,7 @@
       color: white;
     }
 
+    /* Taskbar */
     .taskbar {
       position: absolute;
       bottom: 0;
@@ -562,6 +581,15 @@
       <span>Recycle Bin</span>
     </div>
 
+    <!-- C: Drive Desktop Shortcut -->
+    <div id="c-drive-shortcut" class="physics-icon">
+      <div style="position: relative; width: 38px; height: 38px; pointer-events: none;">
+        <img src="Disk drive.png" alt="Local Disk (C:)" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(1px 2px 4px rgba(0, 0, 0, 0.6));" />
+        <img src="Shortcut.png" alt="Shortcut" style="position: absolute; bottom: 0; left: 0; width: 14px; height: 14px; object-fit: contain; z-index: 2; filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.5));" />
+      </div>
+      <span>Local Disk (C:)</span>
+    </div>
+
     <div id="canvas-container"></div>
 
     <div id="start-menu" class="start-menu">
@@ -601,6 +629,10 @@
           <div class="menu-item">Control Panel</div>
         </div>
       </div>
+      <div class="start-menu-footer">
+        <img id="start-logout-btn" class="start-footer-btn" src="Logout.png" alt="Log Off" title="Log Off" />
+        <img id="start-power-btn" class="start-footer-btn" src="Power.png" alt="Turn Off Computer" title="Turn Off Computer" />
+      </div>
     </div>
 
     <div id="xp-window" class="xp-window">
@@ -610,9 +642,9 @@
           <span>Windows Explorer</span>
         </div>
         <div class="title-bar-controls">
-          <div class="win-btn min" id="win-min-btn">_</div>
-          <div class="win-btn max">□</div>
-          <div class="win-btn close" id="win-close-btn">✕</div>
+          <img class="win-btn-img" id="win-min-btn" src="Minimize.png" alt="Minimize" />
+          <img class="win-btn-img" id="win-max-btn" src="Maximize.png" alt="Maximize" />
+          <img class="win-btn-img" id="win-close-btn" src="Exit.png" alt="Close" />
         </div>
       </div>
 
@@ -750,7 +782,21 @@
     const trashWidth = 56;
     const trashHeight = 56;
 
-    const trashBody = Bodies.rectangle(100, 50, trashWidth, trashHeight, {
+    const trashBody = Bodies.rectangle(60, 50, trashWidth, trashHeight, {
+      isStatic: false,
+      restitution: 0.75,
+      friction: 0.2,
+      density: 0.002,
+      chamfer: { radius: 5 },
+      render: invisibleRender
+    });
+
+    // Local Disk (C:) Desktop Physics Icon
+    const cDriveElem = document.getElementById('c-drive-shortcut');
+    const cDriveWidth = 64;
+    const cDriveHeight = 64;
+
+    const cDriveBody = Bodies.rectangle(130, 50, cDriveWidth, cDriveHeight, {
       isStatic: false,
       restitution: 0.75,
       friction: 0.2,
@@ -761,7 +807,7 @@
 
     const startMenuElem = document.getElementById('start-menu');
     const startMenuWidth = 260;
-    const startMenuHeight = 300;
+    const startMenuHeight = 320;
     const startMenuX = startMenuWidth / 2;
     const startMenuY = screenHeight - taskbarHeight - (startMenuHeight / 2);
 
@@ -772,14 +818,11 @@
       render: invisibleRender
     });
 
-    Composite.add(engine.world, [windowBody, trashBody]);
+    Composite.add(engine.world, [windowBody, trashBody, cDriveBody]);
 
-    let trashGravity = true;
-    let windowGravity = true;
     let isTimeFrozen = false;
     let isWindowMinimized = false;
 
-    // Window position state snapshot for minimizing / restoring
     let savedWindowState = {
       position: { x: screenWidth / 2, y: 140 },
       angle: 0,
@@ -787,7 +830,7 @@
       angularVelocity: 0
     };
 
-    // --- Browser Window Motion Tracking (Inertia System) ---
+    // Inertia Physics Tracking
     let prevScreenX = window.screenX || window.screenLeft;
     let prevScreenY = window.screenY || window.screenTop;
 
@@ -803,7 +846,6 @@
       prevScreenX = currentX;
       prevScreenY = currentY;
 
-      // Apply inertial forces to objects when browser window moves
       if (deltaX !== 0 || deltaY !== 0) {
         const forceMultiplier = 0.0006;
         const force = {
@@ -823,7 +865,7 @@
       }
     });
 
-    // Window Minimize / Restore Logic
+    // Window Minimize / Restore
     const winMinBtn = document.getElementById('win-min-btn');
     const winCloseBtn = document.getElementById('win-close-btn');
     const explorerTaskbarItem = document.getElementById('explorer-taskbar-item');
@@ -878,7 +920,7 @@
       toggleWindow();
     });
 
-    // Pointer Drag System
+    // Pointer Dragging
     let draggedBody = null;
     let dragOffset = { x: 0, y: 0 };
     let previousPos = { x: 0, y: 0 };
@@ -898,12 +940,16 @@
     }
 
     titleBarElem.addEventListener('mousedown', (e) => {
-      if (e.target.classList.contains('win-btn')) return;
+      if (e.target.classList.contains('win-btn-img')) return;
       startDragging(e, windowBody);
     });
 
     trashElem.addEventListener('mousedown', (e) => {
       startDragging(e, trashBody);
+    });
+
+    cDriveElem.addEventListener('mousedown', (e) => {
+      startDragging(e, cDriveBody);
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -925,7 +971,11 @@
       const moveDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
 
       if (draggedBody === trashBody && moveDist < 5) {
-        spawnRecycleBinTab();
+        spawnTab('C:\\Recycle Bin', 'Recycle Bin', 'Recyclebin.png', '🗑️ RECYCLE BIN VAULT: Contains deleted items and desktop junk waiting to be restored or permanently purged.');
+      }
+
+      if (draggedBody === cDriveBody && moveDist < 5) {
+        spawnTab('C:\\', 'Local Disk (C:)', 'Disk drive.png', '💾 LOCAL DISK (C:): Primary hard drive partition containing Windows XP operating system installation and program files.');
       }
 
       Body.setStatic(draggedBody, false);
@@ -933,15 +983,7 @@
       draggedBody = null;
     });
 
-    const startMenuRecycleBin = document.getElementById('start-menu-recycle-bin');
-    startMenuRecycleBin.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (isWindowMinimized) restoreWindow();
-      spawnRecycleBinTab();
-      startMenuElem.classList.remove('open');
-      Composite.remove(engine.world, startMenuBody);
-    });
-
+    // Start Menu Actions
     const startBtn = document.getElementById('start-btn');
     startBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -953,6 +995,25 @@
       }
     });
 
+    const startMenuRecycleBin = document.getElementById('start-menu-recycle-bin');
+    startMenuRecycleBin.addEventListener('click', (e) => {
+      e.stopPropagation();
+      spawnTab('C:\\Recycle Bin', 'Recycle Bin', 'Recyclebin.png', '🗑️ RECYCLE BIN VAULT: Contains deleted items and desktop junk waiting to be restored or permanently purged.');
+      startMenuElem.classList.remove('open');
+      Composite.remove(engine.world, startMenuBody);
+    });
+
+    document.getElementById('start-logout-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      alert('Logging off user Administrator...');
+    });
+
+    document.getElementById('start-power-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      alert('Shutting down Windows XP...');
+    });
+
+    // Explorer Tabs
     const tabBar = document.getElementById('tab-bar');
     const addressText = document.getElementById('address-text');
     const folderLabel = document.getElementById('folder-label');
@@ -991,21 +1052,21 @@
     const initialActive = document.querySelector('.tab-bar .tab.active');
     if (initialActive) activateTab(initialActive);
 
-    function spawnRecycleBinTab() {
+    function spawnTab(path, name, icon, info) {
       if (isWindowMinimized) restoreWindow();
 
       let existingTab = Array.from(tabBar.querySelectorAll('.tab')).find(
-        tab => tab.getAttribute('data-path') === 'C:\\Recycle Bin'
+        tab => tab.getAttribute('data-path') === path
       );
 
       if (!existingTab) {
         existingTab = document.createElement('div');
         existingTab.className = 'tab';
-        existingTab.setAttribute('data-path', 'C:\\Recycle Bin');
-        existingTab.setAttribute('data-name', 'Recycle Bin');
-        existingTab.setAttribute('data-icon', 'Recyclebin.png');
-        existingTab.setAttribute('data-info', '🗑️ RECYCLE BIN VAULT: Contains deleted items and desktop junk waiting to be restored or permanently purged.');
-        existingTab.innerHTML = `<img class="folder-icon-img" src="Recyclebin.png" alt="Recycle Bin" /> Recycle Bin`;
+        existingTab.setAttribute('data-path', path);
+        existingTab.setAttribute('data-name', name);
+        existingTab.setAttribute('data-icon', icon);
+        existingTab.setAttribute('data-info', info);
+        existingTab.innerHTML = `<img class="folder-icon-img" src="${icon}" alt="${name}" /> ${name}`;
 
         tabBar.appendChild(existingTab);
         bindTabClick(existingTab);
@@ -1014,6 +1075,7 @@
       activateTab(existingTab);
     }
 
+    // Modal Details
     const folderItem = document.getElementById('folder-item');
     const secretModal = document.getElementById('secret-modal');
     const secretBody = document.getElementById('secret-body');
@@ -1030,6 +1092,7 @@
       secretModal.classList.remove('open');
     });
 
+    // Time Freeze Key (P)
     const trayClock = document.getElementById('tray-clock');
     window.addEventListener('keydown', (e) => {
       if (e.key === 'p' || e.key === 'P') {
@@ -1039,14 +1102,17 @@
       }
     });
 
+    // Render Loop Transform Update
     Events.on(engine, 'afterUpdate', () => {
-      if (trashGravity) {
-        const trashPos = trashBody.position;
-        const trashAngle = trashBody.angle;
-        trashElem.style.transform = `translate3d(${trashPos.x - trashWidth / 2}px, ${trashPos.y - trashHeight / 2}px, 0px) rotate(${trashAngle}rad)`;
-      }
+      const trashPos = trashBody.position;
+      const trashAngle = trashBody.angle;
+      trashElem.style.transform = `translate3d(${trashPos.x - trashWidth / 2}px, ${trashPos.y - trashHeight / 2}px, 0px) rotate(${trashAngle}rad)`;
 
-      if (windowGravity && !isWindowMinimized) {
+      const cDrivePos = cDriveBody.position;
+      const cDriveAngle = cDriveBody.angle;
+      cDriveElem.style.transform = `translate3d(${cDrivePos.x - cDriveWidth / 2}px, ${cDrivePos.y - cDriveHeight / 2}px, 0px) rotate(${cDriveAngle}rad)`;
+
+      if (!isWindowMinimized) {
         const winPos = windowBody.position;
         const winAngle = windowBody.angle;
         winElem.style.transform = `translate3d(${winPos.x - winWidth / 2}px, ${winPos.y - winHeight / 2}px, 0px) rotate(${winAngle}rad)`;
