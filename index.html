@@ -68,7 +68,7 @@
       cursor: grabbing;
     }
 
-    .physics-trash img {
+    .physics-trash img, .physics-icon img {
       width: 36px;
       height: 36px;
       object-fit: contain;
@@ -109,6 +109,10 @@
     }
 
     .xp-window.minimized {
+      display: none !important;
+    }
+
+    .xp-window.closed {
       display: none !important;
     }
 
@@ -297,6 +301,7 @@
       gap: 12px;
       align-content: flex-start;
       background: #fff;
+      overflow-y: auto;
     }
 
     .file-item {
@@ -358,7 +363,7 @@
       left: 0;
       bottom: 30px;
       width: 260px;
-      height: 320px;
+      height: 330px;
       background: #ffffff;
       border: 2px solid #0055ea;
       border-top-left-radius: 5px;
@@ -438,25 +443,41 @@
     }
 
     .start-menu-footer {
-      height: 36px;
-      background: linear-gradient(to bottom, #0055ea 0%, #0045cc 100%);
+      height: 42px;
+      background: linear-gradient(to bottom, #0058ee 0%, #0046d5 10%, #0036a6 100%);
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding: 0 8px;
-      gap: 8px;
-      border-top: 1px solid #2d6cd8;
+      padding: 0 12px;
+      gap: 16px;
+      border-top: 1px solid #4888f0;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    }
+
+    .start-footer-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: #ffffff;
+      font-size: 11px;
+      font-family: "Tahoma", sans-serif;
+      text-shadow: 1px 1px 1px #001a66;
+    }
+
+    .start-footer-option:hover span {
+      text-decoration: underline;
     }
 
     .start-footer-btn {
       width: 22px;
       height: 22px;
       object-fit: contain;
-      cursor: pointer;
+      filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
     }
 
-    .start-footer-btn:hover {
-      filter: brightness(1.2);
+    .start-footer-option:hover .start-footer-btn {
+      filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5)) brightness(1.15);
     }
 
     .menu-item {
@@ -630,8 +651,14 @@
         </div>
       </div>
       <div class="start-menu-footer">
-        <img id="start-logout-btn" class="start-footer-btn" src="Logout.png" alt="Log Off" title="Log Off" />
-        <img id="start-power-btn" class="start-footer-btn" src="Power.png" alt="Turn Off Computer" title="Turn Off Computer" />
+        <div class="start-footer-option" id="start-logout-btn">
+          <img class="start-footer-btn" src="Logout.png" alt="Log Off" />
+          <span>Log Off</span>
+        </div>
+        <div class="start-footer-option" id="start-power-btn">
+          <img class="start-footer-btn" src="Power.png" alt="Turn Off Computer" />
+          <span>Turn Off Computer</span>
+        </div>
       </div>
     </div>
 
@@ -649,17 +676,9 @@
       </div>
 
       <div class="tab-bar" id="tab-bar">
-        <div class="tab active" data-path="C:\WINDOWS\Resources" data-info="📁 SYSTEM INFORMATION: Hidden Windows XP system resources archive located in C:\WINDOWS\Resources. Press 'P' key anytime to freeze time!">
-          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
-          Resources
-        </div>
-        <div class="tab" data-path="C:\WINDOWS\Media" data-info="🎵 MEDIA VAULT: Contains system sound effects like chimes.wav and Windows XP Startup sound.">
-          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
-          Media
-        </div>
-        <div class="tab" data-path="C:\WINDOWS\System" data-info="⚙️ SYSTEM CONFIG: Crucial system files and DLL drivers. Handle with care!">
-          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
-          System
+        <div class="tab active" data-path="C:\" data-info="💾 LOCAL DISK (C:): Primary hard drive partition containing Windows XP operating system installation and program files.">
+          <img class="folder-icon-img" src="Disk drive.png" alt="Local Disk (C:)" />
+          Local Disk (C:)
         </div>
       </div>
 
@@ -675,8 +694,8 @@
       <div class="address-bar">
         <span>Address</span>
         <div class="address-input" id="address-text">
-          <img class="folder-icon-img" src="Folder.png" alt="Folder" />
-          C:\WINDOWS\Resources
+          <img class="folder-icon-img" src="Disk drive.png" alt="Folder" />
+          C:\
         </div>
       </div>
 
@@ -691,11 +710,8 @@
           </div>
         </div>
 
-        <div class="file-view">
-          <div class="file-item" id="folder-item">
-            <img id="folder-img" src="Folder.png" alt="Folder" />
-            <span id="folder-label">Resources</span>
-          </div>
+        <div class="file-view" id="file-view">
+          <!-- Dynamically populated based on active path -->
         </div>
 
         <div id="secret-modal" class="secret-info-modal">
@@ -715,7 +731,7 @@
         <img class="start-icon" src="WindowsXP.png" alt="Windows XP Logo" />
         <span>start</span>
       </div>
-      <div class="taskbar-items">
+      <div class="taskbar-items" id="taskbar-items-container">
         <div class="taskbar-item active" id="explorer-taskbar-item">
           <img class="folder-icon-img" src="Folder.png" alt="Folder" />
           <span>Windows Explorer</span>
@@ -791,7 +807,6 @@
       render: invisibleRender
     });
 
-    // Local Disk (C:) Desktop Physics Icon
     const cDriveElem = document.getElementById('c-drive-shortcut');
     const cDriveWidth = 64;
     const cDriveHeight = 64;
@@ -807,7 +822,7 @@
 
     const startMenuElem = document.getElementById('start-menu');
     const startMenuWidth = 260;
-    const startMenuHeight = 320;
+    const startMenuHeight = 330;
     const startMenuX = startMenuWidth / 2;
     const startMenuY = screenHeight - taskbarHeight - (startMenuHeight / 2);
 
@@ -822,6 +837,7 @@
 
     let isTimeFrozen = false;
     let isWindowMinimized = false;
+    let isWindowClosed = false;
 
     let savedWindowState = {
       position: { x: screenWidth / 2, y: 140 },
@@ -830,7 +846,6 @@
       angularVelocity: 0
     };
 
-    // Inertia Physics Tracking
     let prevScreenX = window.screenX || window.screenLeft;
     let prevScreenY = window.screenY || window.screenTop;
 
@@ -865,12 +880,12 @@
       }
     });
 
-    // Window Minimize / Restore
     const winMinBtn = document.getElementById('win-min-btn');
     const winCloseBtn = document.getElementById('win-close-btn');
     const explorerTaskbarItem = document.getElementById('explorer-taskbar-item');
 
     function minimizeWindow() {
+      if (isWindowClosed) return;
       savedWindowState.position = { ...windowBody.position };
       savedWindowState.angle = windowBody.angle;
       savedWindowState.velocity = { ...windowBody.velocity };
@@ -883,8 +898,14 @@
     }
 
     function restoreWindow() {
+      if (isWindowClosed) {
+        openWindow();
+        return;
+      }
       isWindowMinimized = false;
       winElem.classList.remove('minimized');
+      winElem.classList.remove('closed');
+      explorerTaskbarItem.style.display = 'flex';
       explorerTaskbarItem.classList.add('active');
 
       Body.setPosition(windowBody, savedWindowState.position);
@@ -897,8 +918,41 @@
       }
     }
 
+    function closeWindow() {
+      isWindowClosed = true;
+      isWindowMinimized = false;
+      winElem.classList.add('closed');
+      winElem.classList.remove('minimized');
+      
+      explorerTaskbarItem.style.display = 'none';
+      explorerTaskbarItem.classList.remove('active');
+      
+      Composite.remove(engine.world, windowBody);
+    }
+
+    function openWindow() {
+      isWindowClosed = false;
+      isWindowMinimized = false;
+      winElem.classList.remove('closed');
+      winElem.classList.remove('minimized');
+      
+      explorerTaskbarItem.style.display = 'flex';
+      explorerTaskbarItem.classList.add('active');
+
+      Body.setPosition(windowBody, { x: screenWidth / 2, y: 140 });
+      Body.setAngle(windowBody, 0);
+      Body.setVelocity(windowBody, { x: 0, y: 0 });
+      Body.setAngularVelocity(windowBody, 0);
+
+      if (!Composite.allBodies(engine.world).includes(windowBody)) {
+        Composite.add(engine.world, windowBody);
+      }
+    }
+
     function toggleWindow() {
-      if (isWindowMinimized) {
+      if (isWindowClosed) {
+        openWindow();
+      } else if (isWindowMinimized) {
         restoreWindow();
       } else {
         minimizeWindow();
@@ -912,7 +966,7 @@
 
     winCloseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      minimizeWindow();
+      closeWindow();
     });
 
     explorerTaskbarItem.addEventListener('click', (e) => {
@@ -920,7 +974,6 @@
       toggleWindow();
     });
 
-    // Pointer Dragging
     let draggedBody = null;
     let dragOffset = { x: 0, y: 0 };
     let previousPos = { x: 0, y: 0 };
@@ -971,10 +1024,12 @@
       const moveDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
 
       if (draggedBody === trashBody && moveDist < 5) {
+        if (isWindowClosed) openWindow();
         spawnTab('C:\\Recycle Bin', 'Recycle Bin', 'Recyclebin.png', '🗑️ RECYCLE BIN VAULT: Contains deleted items and desktop junk waiting to be restored or permanently purged.');
       }
 
       if (draggedBody === cDriveBody && moveDist < 5) {
+        if (isWindowClosed) openWindow();
         spawnTab('C:\\', 'Local Disk (C:)', 'Disk drive.png', '💾 LOCAL DISK (C:): Primary hard drive partition containing Windows XP operating system installation and program files.');
       }
 
@@ -983,7 +1038,6 @@
       draggedBody = null;
     });
 
-    // Start Menu Actions
     const startBtn = document.getElementById('start-btn');
     startBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -998,6 +1052,7 @@
     const startMenuRecycleBin = document.getElementById('start-menu-recycle-bin');
     startMenuRecycleBin.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isWindowClosed) openWindow();
       spawnTab('C:\\Recycle Bin', 'Recycle Bin', 'Recyclebin.png', '🗑️ RECYCLE BIN VAULT: Contains deleted items and desktop junk waiting to be restored or permanently purged.');
       startMenuElem.classList.remove('open');
       Composite.remove(engine.world, startMenuBody);
@@ -1013,12 +1068,79 @@
       alert('Shutting down Windows XP...');
     });
 
-    // Explorer Tabs
+    const folderContents = {
+      'C:\\': [
+        { name: 'Recycle Bin', icon: 'Recyclebin.png', path: 'C:\\Recycle Bin', info: '🗑️ RECYCLE BIN: Contains deleted items and system junk.' },
+        { name: 'Users', icon: 'Folder.png', path: 'C:\\Users', info: '📁 USERS: Contains Administrator and User user profiles and documents.' },
+        { name: 'Program Files', icon: 'Folder.png', path: 'C:\\Program Files', info: '📁 PROGRAM FILES: Installed 64-bit applications and system utilities.' },
+        { name: 'Program Files (x86)', icon: 'Folder.png', path: 'C:\\Program Files (x86)', info: '📁 PROGRAM FILES (X86): Installed 32-bit legacy software and applications.' },
+        { name: 'WINDOWS', icon: 'Folder.png', path: 'C:\\WINDOWS', info: '📁 WINDOWS: Core system drivers, system32 configurations, and resources.' }
+      ],
+      'C:\\WINDOWS': [
+        { name: 'Resources', icon: 'Folder.png', path: 'C:\\WINDOWS\\Resources', info: '📁 RESOURCES: System theme resources, visual styles, and desktop wallpapers.' },
+        { name: 'Media', icon: 'Folder.png', path: 'C:\\WINDOWS\\Media', info: '🎵 MEDIA VAULT: System sound effects and audio notifications.' },
+        { name: 'System', icon: 'Folder.png', path: 'C:\\WINDOWS\\System', info: '⚙️ SYSTEM CONFIG: Crucial system files, DLL drivers, and core engine files.' }
+      ],
+      'C:\\WINDOWS\\Resources': [
+        { name: 'Themes', icon: 'Folder.png', info: '📁 Themes: System visual styles and wallpaper archives.' },
+        { name: 'Luna.msstyles', icon: 'Folder.png', info: '🎨 Luna Theme Style file for Windows XP.' }
+      ],
+      'C:\\WINDOWS\\Media': [
+        { name: 'chimes.wav', icon: 'Folder.png', info: '🔊 Audio sample: System Chimes notification sound.' },
+        { name: 'xp_startup.wav', icon: 'Folder.png', info: '🔊 Audio sample: Classic Windows XP Startup chime.' }
+      ],
+      'C:\\WINDOWS\\System': [
+        { name: 'drivers', icon: 'Folder.png', info: '⚙️ System drivers directory.' },
+        { name: 'kernel32.dll', icon: 'Folder.png', info: '⚙️ Core Kernel Subsystem DLL Library.' }
+      ],
+      'C:\\Users': [
+        { name: 'Administrator', icon: 'Folder.png', info: '👤 Administrator User Profile Folder.' },
+        { name: 'Public', icon: 'Folder.png', info: '👥 Shared Public Documents and Downloads.' }
+      ],
+      'C:\\Program Files': [
+        { name: 'Internet Explorer', icon: 'Folder.png', info: '🌐 Internet Explorer browser binaries.' },
+        { name: 'Windows NT', icon: 'Folder.png', info: '⚙️ Core Windows NT Utilities.' }
+      ],
+      'C:\\Program Files (x86)': [
+        { name: 'Common Files', icon: 'Folder.png', info: '📁 Shared 32-bit program components.' }
+      ],
+      'C:\\Recycle Bin': [
+        { name: 'Deleted_File.txt', icon: 'Folder.png', info: '📄 A previously deleted text file.' }
+      ]
+    };
+
     const tabBar = document.getElementById('tab-bar');
     const addressText = document.getElementById('address-text');
-    const folderLabel = document.getElementById('folder-label');
-    const folderImg = document.getElementById('folder-img');
+    const fileView = document.getElementById('file-view');
+    const secretModal = document.getElementById('secret-modal');
+    const secretBody = document.getElementById('secret-body');
+    const secretClose = document.getElementById('secret-close');
     let currentSecretInfo = "";
+
+    function renderFileView(path, folderName, iconSrc) {
+      fileView.innerHTML = '';
+      const items = folderContents[path] || [
+        { name: folderName, icon: iconSrc, info: currentSecretInfo }
+      ];
+
+      items.forEach(item => {
+        const itemElem = document.createElement('div');
+        itemElem.className = 'file-item';
+        itemElem.innerHTML = `<img src="${item.icon}" alt="${item.name}" /><span>${item.name}</span>`;
+
+        itemElem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (item.path) {
+            spawnTab(item.path, item.name, item.icon, item.info);
+          } else {
+            secretBody.innerText = item.info || currentSecretInfo;
+            secretModal.classList.add('open');
+          }
+        });
+
+        fileView.appendChild(itemElem);
+      });
+    }
 
     function activateTab(tabElem) {
       document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
@@ -1030,8 +1152,7 @@
       currentSecretInfo = tabElem.getAttribute('data-info');
 
       addressText.innerHTML = `<img class="folder-icon-img" src="${iconSrc}" alt="Icon" /> ${path}`;
-      folderLabel.innerText = folderName;
-      folderImg.src = iconSrc;
+      renderFileView(path, folderName, iconSrc);
     }
 
     function bindTabClick(tab) {
@@ -1053,7 +1174,11 @@
     if (initialActive) activateTab(initialActive);
 
     function spawnTab(path, name, icon, info) {
-      if (isWindowMinimized) restoreWindow();
+      if (isWindowClosed) {
+        openWindow();
+      } else if (isWindowMinimized) {
+        restoreWindow();
+      }
 
       let existingTab = Array.from(tabBar.querySelectorAll('.tab')).find(
         tab => tab.getAttribute('data-path') === path
@@ -1075,24 +1200,11 @@
       activateTab(existingTab);
     }
 
-    // Modal Details
-    const folderItem = document.getElementById('folder-item');
-    const secretModal = document.getElementById('secret-modal');
-    const secretBody = document.getElementById('secret-body');
-    const secretClose = document.getElementById('secret-close');
-
-    folderItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      secretBody.innerText = currentSecretInfo;
-      secretModal.classList.add('open');
-    });
-
     secretClose.addEventListener('click', (e) => {
       e.stopPropagation();
       secretModal.classList.remove('open');
     });
 
-    // Time Freeze Key (P)
     const trayClock = document.getElementById('tray-clock');
     window.addEventListener('keydown', (e) => {
       if (e.key === 'p' || e.key === 'P') {
@@ -1102,7 +1214,6 @@
       }
     });
 
-    // Render Loop Transform Update
     Events.on(engine, 'afterUpdate', () => {
       const trashPos = trashBody.position;
       const trashAngle = trashBody.angle;
@@ -1112,7 +1223,7 @@
       const cDriveAngle = cDriveBody.angle;
       cDriveElem.style.transform = `translate3d(${cDrivePos.x - cDriveWidth / 2}px, ${cDrivePos.y - cDriveHeight / 2}px, 0px) rotate(${cDriveAngle}rad)`;
 
-      if (!isWindowMinimized) {
+      if (!isWindowMinimized && !isWindowClosed) {
         const winPos = windowBody.position;
         const winAngle = windowBody.angle;
         winElem.style.transform = `translate3d(${winPos.x - winWidth / 2}px, ${winPos.y - winHeight / 2}px, 0px) rotate(${winAngle}rad)`;
